@@ -5,7 +5,7 @@
   "description": "Visa Agent skill distribution and static homepage",
   "scripts": {
     "build": "python3 tools/build_site.py",
-    "test": "python3 -m unittest discover -s tests -v",
+    "test": "node --test tests/cases.test.cjs",
     "test:browser": "playwright test",
     "test:site": "node tests/site-dom.test.cjs"
   },

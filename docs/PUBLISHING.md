@@ -34,6 +34,8 @@ The build uses `GITHUB_REPOSITORY` to set the homepage installation command. Rel
 
 ## Reproduce screenshots
 
+The site build uses Python 3.10+ to package the download ZIPs. It runs the same bundled Node.js script that Codex and Claude Code use for case files.
+
 ```sh
 npm ci
 python3 tools/build_site.py
