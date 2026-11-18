@@ -134,6 +134,18 @@ class CaseTests(unittest.TestCase):
         visa.validate(self.app, self.plan)
         self.assertIn('lang="vi"', visa.render(self.app, self.plan)[0])
 
+    def test_dashboard_summarizes_earliest_outstanding_deadline(self):
+        first, second, third = self.plan['tasks']
+        first.update(status='done', due_on='2030-01-01', due_kind='recommended')
+        second.update(due_on='2030-03-01', due_kind='recommended')
+        third.update(due_on='2030-02-01', due_kind='official')
+        page, _ = visa.render(self.app, self.plan)
+        overview = page.split('<div class="overview">', 1)[1].split('<section', 1)[0]
+        self.assertIn('<time datetime="2030-02-01">2030-02-01</time>', overview)
+        self.assertIn('Official deadline', overview)
+        self.assertNotIn('2030-01-01', overview)
+        self.assertNotIn('2030-03-01', overview)
+
     def test_invalid_replan_does_not_touch_records(self):
         folder = self.create()
         before = (folder / 'plan.json').read_bytes()
