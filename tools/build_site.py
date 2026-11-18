@@ -46,8 +46,14 @@ def main():
     plan = visa.read(SKILL / 'examples/plan.json')
     plan['tasks'][0]['status'] = 'done'
     plan['tasks'][0]['notes'] = ['Synthetic demo: the applicant reported that the school and course are confirmed.']
+    plan['tasks'][1].update(verification='needs_review', evidence=[{
+        'source_id': 'inz-discovery',
+        'supports': 'Starting point for official research. Visa requirements have not been checked in this sample.',
+    }])
     # Show how a suggested date looks without presenting it as an official deadline.
-    plan['tasks'][1].update(due_on='2027-02-15', due_kind='recommended')
+    plan['tasks'][2].update(due_on='2027-02-15', due_kind='recommended', depends_on=['confirm-course'])
+    plan['tasks'][2]['details'] = 'List accommodation and transport options. Wait for confirmed dates and conditions before booking.'
+    plan['tasks'][2]['due_basis'] = {'evidence': 'Fictional planning target for comparing arrival options.'}
     translations = (ROOT / 'website/translations.js').read_text(encoding='utf-8')
     locales = json.loads(translations.removeprefix('window.VISA_AGENT_LOCALES = ').removesuffix(';\n'))
     for language, locale in locales.items():
@@ -58,9 +64,11 @@ def main():
             localized_applicant.update(language=language, display_name=demo_text['name'], destination=demo_text['destination'], purpose=demo_text['purpose'], age_band=demo_text['age'])
             localized_plan['ui'] = demo_text['ui']
             localized_plan['sources'][0]['title'] = demo_text['source']
+            localized_plan['tasks'][1]['evidence'][0]['supports'] = demo_text['visa_evidence']
             localized_plan['open_questions'] = [demo_text[f'question{i}'] for i in range(1, 4)]
             for i, task in enumerate(localized_plan['tasks'], 1):
                 task.update(phase=demo_text[f'phase{i}'], title=demo_text[f'title{i}'], details=demo_text[f'details{i}'])
+            localized_plan['tasks'][2]['due_basis'] = {'evidence': demo_text['arrival_due_basis']}
             localized_plan['tasks'][0]['notes'] = [demo_text['note']]
         demo = output / 'demos/nz-study'
         if language != 'en':
