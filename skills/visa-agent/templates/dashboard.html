@@ -39,6 +39,18 @@ h1, h2, h3, p, li, .task-title, a { overflow-wrap: anywhere; }
 .metric-label, .metric-note { color: var(--muted); font-size: 0.82rem; }
 .metric-value { color: var(--green); margin-block: 3px; font-size: clamp(1rem, 2vw, 1.32rem); font-weight: 700; }
 .metric-note:empty { display: none; }
+.next-actions {
+  padding: 14px 16px; margin-bottom: 24px;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 12px;
+}
+.next-actions ol { margin: 8px 0 0; }
+.next-actions li { padding: 5px 0; }
+.next-actions li > span { margin-inline-start: 8px; }
+.task-row:target { background: var(--soft); }
+.blocked {
+  display: inline-block; margin-inline-start: 8px;
+  color: #674909; font-size: 0.75rem; font-weight: 500;
+}
 progress { display: block; width: 100%; height: 8px; margin-top: 8px; accent-color: var(--green); }
 .hint { color: var(--muted); font-size: 0.85rem; margin-block: 5px 14px; }
 .phase, .questions { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; }
@@ -81,6 +93,9 @@ time { font-variant-numeric: tabular-nums; white-space: nowrap; }
 }
 .task-body > * + * { margin-top: 6px; }
 .task-kind, small { color: var(--muted); }
+.task-evidence { border-top: 1px solid var(--line); padding-top: 8px; }
+.task-evidence h4, .task-evidence ul { margin: 0; }
+.task-evidence li { margin-block: 6px; }
 .task-description, .task-body li { white-space: pre-wrap; }
 ul { padding-inline-start: 1.25rem; }
 a { color: var(--green); text-underline-offset: 3px; }
@@ -134,6 +149,7 @@ footer { margin-top: 24px; font-size: 0.8rem; color: var(--muted); }
           <progress value="{{percent}}" max="100" aria-labelledby="progress-label">{{percent}}%</progress>
         </div>
       </div>
+      {{next_actions}}
       <section aria-labelledby="checklist-title">
         <h2 id="checklist-title">{{checklist}}</h2>
         <p class="hint">{{hint}}</p>

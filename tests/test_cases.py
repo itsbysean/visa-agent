@@ -1,5 +1,7 @@
 import copy
+from contextlib import redirect_stdout
 import importlib.util
+import io
 import json
 from pathlib import Path
 import tempfile
@@ -145,6 +147,95 @@ class CaseTests(unittest.TestCase):
         self.assertIn('Official deadline', overview)
         self.assertNotIn('2030-01-01', overview)
         self.assertNotIn('2030-03-01', overview)
+
+    def test_relative_deadline_is_a_candidate_until_assigned(self):
+        task = self.plan['tasks'][0]
+        task['due_basis'] = {
+            'evidence': 'Sample notice anchored to January 31',
+            'anchor_on': '2028-01-31', 'offset': 1, 'unit': 'months',
+        }
+        page, summary = visa.render(self.app, self.plan)
+        self.assertIn('Possible deadline — verify before relying on it: 2028-02-29', page)
+        self.assertIn('Sample notice anchored to January 31', summary)
+        self.assertNotIn('<time datetime="2028-02-29">', page)
+        task.update(due_on='2028-03-01', due_kind='official')
+        with self.assertRaisesRegex(ValueError, 'differs from deadline calculation'):
+            visa.validate(self.app, self.plan)
+        task['due_on'] = '2028-02-29'
+        page, _ = visa.render(self.app, self.plan)
+        self.assertIn('<time datetime="2028-02-29">', page)
+        self.assertNotIn('Possible deadline', page)
+
+    def test_next_actions_exclude_waiting_and_show_three_in_date_order(self):
+        completed, review, dependent = self.plan['tasks']
+        completed['status'] = 'done'
+        example = dict(completed, status='todo', depends_on=[completed['id']])
+        self.plan['tasks'].extend([
+            dict(example, id='later', due_on='2030-02-01', due_kind='recommended'),
+            dict(example, id='undated'),
+            dict(example, id='waiting', waiting_on='Applicant must confirm a date'),
+            dict(example, id='earliest', due_on='2030-01-01', due_kind='official'),
+            dict(example, id='fourth'),
+        ])
+        page, _ = visa.render(self.app, self.plan)
+        actions = page.split('<section class="next-actions">')[1].split('</section>')[0]
+        self.assertLess(actions.index('#task-earliest'), actions.index('#task-later'))
+        self.assertLess(actions.index('#task-later'), actions.index('#task-undated'))
+        self.assertEqual(actions.count('<li>'), 3)
+        for task in (review['id'], dependent['id'], 'waiting', 'fourth', completed['id']):
+            self.assertNotIn(f'#task-{task}"', actions)
+        self.assertIn('Waiting on: Applicant must confirm a date', page)
+
+    def test_cross_checked_evidence_requires_distinct_checked_pages_and_renders_claims(self):
+        task = self.plan['tasks'][1]
+        task.update(kind='official_requirement', status='todo', verification='cross_checked')
+        checked_on = date.today().isoformat()
+        source = self.plan['sources'][0]
+        source['checked_on'] = checked_on
+        second = dict(source, id='second-guide', url=source['url'] + '?view=print#health')
+        self.plan['sources'].append(second)
+        task['source_ids'].append(second['id'])
+        task['evidence'] = [
+            {'source_id': source['id'], 'supports': 'Synthetic route condition'},
+            {'source_id': second['id'], 'supports': 'Synthetic applicability condition <example>'},
+        ]
+        with self.assertRaisesRegex(ValueError, '2 distinct checked evidence'):
+            visa.validate(self.app, self.plan)
+        second.update(url=source['url'] + 'health', checked_on=None)
+        with self.assertRaisesRegex(ValueError, '2 distinct checked evidence'):
+            visa.validate(self.app, self.plan)
+        second['checked_on'] = checked_on
+        page, summary = visa.render(self.app, self.plan)
+        self.assertIn('Cross-checked', page)
+        self.assertIn(f'Checked: {checked_on}', page)
+        self.assertIn('Synthetic applicability condition &lt;example&gt;', page)
+        self.assertIn('Synthetic route condition', summary)
+        task['verification'] = 'single_source'
+        with self.assertRaisesRegex(ValueError, 'must cite one checked evidence'):
+            visa.validate(self.app, self.plan)
+        task['evidence'].pop()
+        self.assertIn('Single official source', visa.render(self.app, self.plan)[0])
+
+    def test_replan_reports_material_changes_and_ignores_check_date_refresh(self):
+        folder = self.create()
+        new = copy.deepcopy(self.plan)
+        new['sources'][0]['checked_on'] = date.today().isoformat()
+        new['tasks'][0].update(due_on='2030-01-02', due_kind='recommended')
+        new['tasks'].pop()
+        new['open_questions'].append('Confirm the new date')
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            rc = visa.main(['replan', '--case', str(folder), '--plan', self.draft('new.json', new), '--show-changes'])
+        self.assertEqual(rc, 0)
+        report = json.loads(stdout.getvalue())
+        self.assertEqual(report['dashboard'], str((folder / 'index.html').resolve()))
+        self.assertEqual(report['sources'], [])
+        self.assertEqual(report['questions_added'], ['Confirm the new date'])
+        self.assertEqual([t['change'] for t in report['tasks']], ['review', 'archived'])
+        self.assertEqual(report['tasks'][0]['fields']['due_on'], {'before': None, 'after': '2030-01-02'})
+        saved = visa.read(folder / 'plan.json')
+        self.assertEqual(saved['tasks'][0]['status'], 'needs_review')
+        self.assertEqual(saved['archived_tasks'][0]['id'], 'plan-arrival')
 
     def test_invalid_replan_does_not_touch_records(self):
         folder = self.create()

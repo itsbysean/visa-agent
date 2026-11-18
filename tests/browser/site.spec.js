@@ -47,10 +47,12 @@ for (const [name, viewport] of [['desktop', {width:1440, height:1000}], ['mobile
       await expect(page.frameLocator('iframe').locator('article.task')).toHaveCount(3);
       const sample = page.frameLocator('iframe');
       await expect(sample.locator('.overview time')).toHaveText('2027-02-15');
+      await expect(sample.locator('.next-actions a')).toHaveAttribute('href', '#task-plan-arrival');
       const task = sample.locator('.needs_review details');
       await expect(task.locator('.task-body')).toBeHidden();
       await task.locator('summary').press('Enter');
       await expect(task.locator('.task-body a')).toBeVisible();
+      await expect(task.locator('.task-evidence li')).toHaveCount(1);
       await task.locator('summary').press('Enter');
       await expect(task.locator('.task-body')).toBeHidden();
       const overflow = await page.evaluate(() => [...document.querySelectorAll('body *')].filter(el => el.getBoundingClientRect().right > innerWidth + 1).map(el => ({tag:el.tagName, id:el.id, class:el.className, right:el.getBoundingClientRect().right})));
@@ -79,6 +81,11 @@ for (const [name, viewport] of [['desktop', {width:1440, height:1000}], ['mobile
     await page.locator('.needs_review summary').click();
     await expect(page.locator('.needs_review .task-body')).toBeVisible();
     await expect(page.locator('.needs_review .task-body')).toContainText('Depends on: Confirm school and course');
+    await expect(page.locator('.needs_review .task-evidence')).toContainText('Visa requirements have not been checked in this sample.');
+    await page.locator('.next-actions a').click();
+    await expect(page).toHaveURL(/#task-plan-arrival$/);
+    await page.locator('#task-plan-arrival').press('Enter');
+    await expect(page.locator('#task-plan-arrival + .task-body')).toContainText('Fictional planning target');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({path:path.join(evidence,`dashboard-${name}.png`),fullPage:true});
   });
