@@ -18,6 +18,7 @@ KINDS = {'official_requirement', 'recommendation', 'to_verify'}
 LABELS = {
     'en': dict(title='Visa preparation', progress='Progress', tasks='tasks completed', phases='Preparation stages', questions='Open questions', sources='Official sources', checked='Checked', unverified='Not verified', notes='Notes', due='Due', official='Official deadline', recommended='Recommended date', dependencies='Depends on', archived='Archived tasks — review required', view='To update progress, tell your agent which task is complete.', todo='To do', in_progress='In progress', done='Done', needs_review='Needs review', official_requirement='Official requirement', recommendation='Recommendation', to_verify='To verify', no_date='No date set', updated='Updated', purpose='Purpose', destination='Destination', source='Source', review='Review reason'),
 }
+OPTIONAL_LABELS = {'next_due', 'checklist'}
 
 
 def require(condition, message):
@@ -51,7 +52,7 @@ def validate(applicant, plan):
     require(isinstance(applicant.get('citizenships'), list) and applicant['citizenships'] and all(nonempty(x) for x in applicant['citizenships']), 'citizenships must be a nonempty string list')
     labels = LABELS.get(applicant['language'])
     ui = plan.get('ui', {})
-    require(isinstance(ui, dict) and all(k in LABELS['en'] and nonempty(v) for k, v in ui.items()), 'ui must contain valid label overrides')
+    require(isinstance(ui, dict) and all((k in LABELS['en'] or k in OPTIONAL_LABELS) and nonempty(v) for k, v in ui.items()), 'ui must contain valid label overrides')
     if labels is None:
         require(set(LABELS['en']) <= set(ui), 'Other languages require all ui labels translated; see data contract')
     for key in ('tasks', 'sources', 'open_questions'):
@@ -161,25 +162,75 @@ def render(applicant, plan):
     active = plan['tasks']
     done = sum(t['status'] == 'done' for t in active)
     percent = round(done / len(active) * 100) if active else 0
+    next_due = min(
+        (t for t in active if t['status'] != 'done' and t['due_on']),
+        key=lambda t: t['due_on'],
+        default=None,
+    )
+    archived_tasks = plan.get('archived_tasks', [])
+    task_titles = {t['id']: t['title'] for t in active + archived_tasks}
     sources = {s['id']: s for s in plan['sources']}
     def link(sid):
         s = sources[sid]
         return f'<a href="{esc(s["url"])}" target="_blank" rel="noopener noreferrer">{esc(s["title"])}</a>'
     def task_html(t):
-        due = esc(t['due_on']) + ' · ' + esc(labels[t['due_kind']]) if t['due_on'] else esc(labels['no_date'])
-        deps = f'<p>{esc(labels["dependencies"])}: {esc(", ".join(t["depends_on"]))}</p>' if t['depends_on'] else ''
+        due = date_html(t)
+        due_kind = f'<p>{esc(labels[t["due_kind"]])}</p>' if t['due_on'] else ''
+        dependencies = ', '.join(task_titles[tid] for tid in t['depends_on'])
+        deps = f'<p>{esc(labels["dependencies"])}: {esc(dependencies)}</p>' if dependencies else ''
         notes = '<ul>' + ''.join(f'<li>{esc(n)}</li>' for n in t['notes']) + '</ul>' if t['notes'] else ''
         citations = ' · '.join(link(s) for s in t['source_ids'])
         reasons = {'en': {'requirements_changed': 'Requirements or evidence changed.', 'applicant_facts_changed': 'Applicant circumstances changed.', 'removed_from_current_plan': 'Removed from the current plan.'}}
         reason = reasons.get(applicant['language'], {}).get(t.get('review_reason'), labels['needs_review'])
         review = f'<p>{esc(labels["review"])}: {esc(reason)}</p>' if t.get('review_reason') else ''
-        return f'<article class="task {t["status"]}"><div class="task-heading"><h3>{esc(t["title"])}</h3><span class="badge">{esc(labels[t["status"]])}</span></div><p class="muted">{esc(t["id"])} · {esc(labels[t["kind"]])}</p><p>{esc(t["details"])}</p><p>{esc(labels["due"])}: {due}</p>{deps}{review}{notes}<div class="citations">{citations}</div></article>'
+        source_links = f'<p class="citations">{citations}</p>' if citations else ''
+        return (
+            f'<article class="task {t["status"]}"><details class="task-details">'
+            f'<summary class="task-row"><span class="task-title">{esc(t["title"])}</span>'
+            f'<span class="task-date">{due}</span><span class="badge">{esc(labels[t["status"]])}</span></summary>'
+            f'<div class="task-body"><p class="task-kind">{esc(labels[t["kind"]])}</p>'
+            f'<p class="task-description">{esc(t["details"])}</p>'
+            f'{due_kind}{deps}{review}{notes}{source_links}</div></details></article>'
+        )
+
+    def date_html(task):
+        if task is None or not task['due_on']:
+            return esc(labels['no_date'])
+        day = esc(task['due_on'])
+        return f'<time datetime="{day}">{day}</time>'
+
     phases = list(dict.fromkeys(t['phase'] for t in active))
-    sections = ''.join(f'<section><h2>{esc(phase)}</h2>' + ''.join(task_html(t) for t in active if t['phase'] == phase) + '</section>' for phase in phases)
-    questions = '<section><h2>' + esc(labels['questions']) + '</h2><ul>' + ''.join(f'<li>{esc(q)}</li>' for q in plan['open_questions']) + '</ul></section>' if plan['open_questions'] else ''
-    archived = '<section><h2>' + esc(labels['archived']) + '</h2>' + ''.join(task_html(t) for t in plan.get('archived_tasks', [])) + '</section>' if plan.get('archived_tasks') else ''
+    sections = ''.join(
+        f'<section class="phase"><h3>{esc(phase)}</h3>'
+        + ''.join(task_html(t) for t in active if t['phase'] == phase) + '</section>'
+        for phase in phases
+    )
+    questions = (
+        '<aside class="questions" aria-labelledby="questions-title">'
+        f'<h2 id="questions-title">{esc(labels["questions"])}</h2><ul>'
+        + ''.join(f'<li>{esc(q)}</li>' for q in plan['open_questions']) + '</ul></aside>'
+        if plan['open_questions'] else ''
+    )
+    archived = (
+        f'<section class="phase archived"><h2>{esc(labels["archived"])}</h2>'
+        + ''.join(task_html(t) for t in archived_tasks) + '</section>'
+        if archived_tasks else ''
+    )
     source_html = ''.join(f'<li>{link(s["id"])}<br><small>{esc(labels["checked"])}: {esc(s.get("checked_on") or labels["unverified"])}</small></li>' for s in plan['sources'])
-    values = dict(lang=esc(applicant['language']), title=esc(labels['title']), name=esc(applicant['display_name']), destination=esc(applicant['destination']), purpose=esc(applicant['purpose']), progress=esc(labels['progress']), count=f'{done}/{len(active)} {esc(labels["tasks"])}', percent=str(percent), hint=esc(labels['view']), sections=sections, questions=questions, archived=archived, source_title=esc(labels['sources']), sources=source_html, updated=esc(labels['updated']) + ': ' + esc(plan.get('updated_at', '')))
+    english = applicant['language'] == 'en'
+    values = dict(
+        lang=esc(applicant['language']), title=esc(labels['title']), name=esc(applicant['display_name']),
+        destination=esc(applicant['destination']), purpose=esc(applicant['purpose']),
+        progress=esc(labels['progress']), count=f'{done}/{len(active)} {esc(labels["tasks"])}',
+        percent=str(percent), hint=esc(labels['view']),
+        deadline_label=esc(labels.get('next_due', 'Next deadline' if english else labels['due'])),
+        deadline=date_html(next_due),
+        deadline_kind=esc(labels[next_due['due_kind']]) if next_due else '',
+        checklist=esc(labels.get('checklist', 'Checklist' if english else labels['phases'])),
+        sections=sections, questions=questions, archived=archived,
+        source_title=esc(labels['sources']), sources=source_html,
+        updated=esc(labels['updated']) + ': ' + esc(plan.get('updated_at', '')),
+    )
     template = (Path(__file__).resolve().parent.parent / 'templates/dashboard.html').read_text(encoding='utf-8')
     page = re.sub(r'\{\{([a-z_]+)\}\}', lambda m: values[m[1]], template)
     # Escape generated Markdown metacharacters and embedded HTML in user data.

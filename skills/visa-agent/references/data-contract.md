@@ -42,6 +42,8 @@ needs_review official_requirement recommendation to_verify no_date updated
 purpose destination source review
 ```
 
+Optional dashboard labels are `next_due` and `checklist`. Existing translations can omit them. The dashboard then uses the translated `due` and `phases` labels for non-English cases.
+
 ## File lifecycle
 
 - `create` validates first and refuses an existing case directory.

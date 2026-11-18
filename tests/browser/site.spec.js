@@ -45,6 +45,14 @@ for (const [name, viewport] of [['desktop', {width:1440, height:1000}], ['mobile
       await expect(page.locator('#tab-visit')).toHaveAttribute('aria-selected','true');
       await expect(page.frameLocator('iframe').locator('html')).toHaveAttribute('lang',language);
       await expect(page.frameLocator('iframe').locator('article.task')).toHaveCount(3);
+      const sample = page.frameLocator('iframe');
+      await expect(sample.locator('.overview time')).toHaveText('2027-02-15');
+      const task = sample.locator('.needs_review details');
+      await expect(task.locator('.task-body')).toBeHidden();
+      await task.locator('summary').press('Enter');
+      await expect(task.locator('.task-body a')).toBeVisible();
+      await task.locator('summary').press('Enter');
+      await expect(task.locator('.task-body')).toBeHidden();
       const overflow = await page.evaluate(() => [...document.querySelectorAll('body *')].filter(el => el.getBoundingClientRect().right > innerWidth + 1).map(el => ({tag:el.tagName, id:el.id, class:el.className, right:el.getBoundingClientRect().right})));
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), JSON.stringify({language,overflow})).toBe(true);
       await page.locator('iframe').scrollIntoViewIfNeeded();
@@ -68,6 +76,9 @@ for (const [name, viewport] of [['desktop', {width:1440, height:1000}], ['mobile
     await expect(page.locator('article.needs_review')).toHaveCount(1);
     await expect(page.locator('body')).toContainText('This demo has not checked official requirements');
     await expect(page.locator('body')).toContainText('Not verified');
+    await page.locator('.needs_review summary').click();
+    await expect(page.locator('.needs_review .task-body')).toBeVisible();
+    await expect(page.locator('.needs_review .task-body')).toContainText('Depends on: Confirm school and course');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({path:path.join(evidence,`dashboard-${name}.png`),fullPage:true});
   });

@@ -46,6 +46,8 @@ def main():
     plan = visa.read(SKILL / 'examples/plan.json')
     plan['tasks'][0]['status'] = 'done'
     plan['tasks'][0]['notes'] = ['Synthetic demo: the applicant reported that the school and course are confirmed.']
+    # Show how a suggested date looks without presenting it as an official deadline.
+    plan['tasks'][1].update(due_on='2027-02-15', due_kind='recommended')
     translations = (ROOT / 'website/translations.js').read_text(encoding='utf-8')
     locales = json.loads(translations.removeprefix('window.VISA_AGENT_LOCALES = ').removesuffix(';\n'))
     for language, locale in locales.items():
