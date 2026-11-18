@@ -25,7 +25,7 @@ python3 tools/build_site.py --repository OWNER/REPO
 
 ## Installation
 
-Requires Node.js 22.20+ and Python 3.10+. Extract the full project ZIP or download this repository, then run this command from the project root:
+Installing and running the skill requires Node.js 22.20+. The agent runs the bundled script with no npm packages. Opening the dashboard only requires a browser. Extract the full project ZIP or download this repository, then run this command from the project root:
 
 ```sh
 npx skills add . --skill visa-agent -a codex claude-code
@@ -69,10 +69,12 @@ Exclude real cases and `.history` backups from version control because they can 
 
 ## Structure and verification
 
+The repository build uses Python 3.10+ to package the website downloads. Skill users only need Node.js.
+
 ```text
 skills/visa-agent/
   SKILL.md                 # Skill entry point discovered by the CLI
-  scripts/visa_case.py      # Create, update, replan, validate and render cases
+  scripts/visa_case.cjs      # Create, update, replan, validate and render cases
   templates/dashboard.html
   references/              # Research guidance and data contract
   examples/                # Synthetic input data
@@ -83,7 +85,7 @@ tests/                     # Case data and homepage tests
 ```
 
 ```sh
-python3 -m unittest discover -s tests -v
+npm test
 npm ci
 python3 tools/build_site.py
 npm run test:site

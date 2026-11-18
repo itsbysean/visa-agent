@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """Build the static GitHub Pages website, synthetic demo and downloadable bundles."""
 import argparse
-import importlib.util
 import json
 from pathlib import Path
 import re
 import shutil
+import subprocess
+import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / 'skills/visa-agent'
+CASE_SCRIPT = SKILL / 'scripts/visa_case.cjs'
 
 
 def zip_tree(source, output, prefix=''):
@@ -38,12 +40,8 @@ def main():
             shutil.copy2(source, output / source.name)
     (output / '.nojekyll').touch()
     (output / 'site-config.js').write_text('window.VISA_AGENT_CONFIG = ' + json.dumps({'repository': args.repository}) + ';\n', encoding='utf-8')
-    module = importlib.util.spec_from_file_location('visa_case', SKILL / 'scripts/visa_case.py')
-    visa = importlib.util.module_from_spec(module)
-    module.loader.exec_module(visa)
-    applicant = visa.read(SKILL / 'examples/applicant.json')
-    applicant['case_id'] = 'nz-study-demo'
-    plan = visa.read(SKILL / 'examples/plan.json')
+    applicant = json.loads((SKILL / 'examples/applicant.json').read_text(encoding='utf-8'))
+    plan = json.loads((SKILL / 'examples/plan.json').read_text(encoding='utf-8'))
     plan['tasks'][0]['status'] = 'done'
     plan['tasks'][0]['notes'] = ['Synthetic demo: the applicant reported that the school and course are confirmed.']
     plan['tasks'][1].update(verification='needs_review', evidence=[{
@@ -74,7 +72,18 @@ def main():
         if language != 'en':
             demo = demo / language
         demo.mkdir(parents=True, exist_ok=True)
-        visa.save(demo, localized_applicant, localized_plan)
+        with tempfile.TemporaryDirectory() as temp:
+            drafts = Path(temp)
+            applicant_file = drafts / 'applicant.json'
+            plan_file = drafts / 'plan.json'
+            applicant_file.write_text(json.dumps(localized_applicant, ensure_ascii=False), encoding='utf-8')
+            plan_file.write_text(json.dumps(localized_plan, ensure_ascii=False), encoding='utf-8')
+            subprocess.run([
+                'node', str(CASE_SCRIPT), 'create', '--root', temp, '--case-id', 'nz-study-demo',
+                '--applicant', str(applicant_file), '--plan', str(plan_file),
+            ], check=True, stdout=subprocess.DEVNULL)
+            for file in (drafts / 'nz-study-demo').iterdir():
+                shutil.copy2(file, demo / file.name)
     downloads = output / 'downloads'
     downloads.mkdir(exist_ok=True)
     zip_tree(SKILL, downloads / 'visa-agent-skill.zip', 'visa-agent')

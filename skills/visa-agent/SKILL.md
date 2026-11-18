@@ -42,11 +42,13 @@ Use `references/data-contract.md` for the minimal JSON contract. Write draft inp
 - Use `kind: official_requirement`, `recommendation`, or `to_verify` to separate evidence-backed requirements from advice and uncertainty.
 - No submissions, payments, bookings, or agency/authority messages are performed by this skill. It prepares and tracks work. Do not promise visa approval.
 
+The agent runs the bundled script for the user. Check that Node.js 22.20+ is available before running it. Reuse the runtime already available to the agent or used for Skills CLI installation. If it is missing, explain the requirement and ask before installing anything. Opening a generated dashboard only requires a browser.
+
 Commands (replace `<skill>` with this package's absolute directory; use absolute output paths):
 
 ```sh
-python <skill>/scripts/visa_case.py create --root /project/students --case-id case-001 --applicant /tmp/applicant.json --plan /tmp/plan.json
-python <skill>/scripts/visa_case.py render --case /project/students/case-001
+node <skill>/scripts/visa_case.cjs create --root /project/students --case-id case-001 --applicant /tmp/applicant.json --plan /tmp/plan.json
+node <skill>/scripts/visa_case.cjs render --case /project/students/case-001
 ```
 
 The tool creates `student.json` (applicant/case metadata), `plan.json` (authoritative task state and research), `README.md` (readable summary), and `index.html` (local dashboard). It refuses to overwrite an existing case. The bundled HTML template is reused, with escaped data and no external resources. Finish with links to the output dashboard and summary, and briefly identify unresolved requirements.
@@ -56,7 +58,7 @@ The tool creates `student.json` (applicant/case metadata), `plan.json` (authorit
 For a simple status or note change, read the case and resolve the referenced task ID. If ambiguous, ask which task. Update through the command, without repeating research merely to record progress:
 
 ```sh
-python <skill>/scripts/visa_case.py update --case /project/students/case-001 --task passport --status done --note 'Applicant confirmed passport is ready.'
+node <skill>/scripts/visa_case.cjs update --case /project/students/case-001 --task passport --status done --note 'Applicant confirmed passport is ready.'
 ```
 
 `--note` appends a note; it does not erase prior notes. Use `--status todo` to reopen. The HTML is a view: the user reports completion in conversation, and the agent changes JSON and regenerates the view. No browser storage, server, or editable checkboxes are required.
@@ -64,13 +66,13 @@ python <skill>/scripts/visa_case.py update --case /project/students/case-001 --t
 For changed circumstances or refreshed requirements, re-interview only affected facts, check official sources again, and create replacement plan/applicant draft files:
 
 ```sh
-python <skill>/scripts/visa_case.py replan --case /project/students/case-001 --plan /tmp/new-plan.json --applicant /tmp/new-applicant.json --show-changes
+node <skill>/scripts/visa_case.cjs replan --case /project/students/case-001 --plan /tmp/new-plan.json --applicant /tmp/new-applicant.json --show-changes
 ```
 
 Keep task IDs stable for the same work. The merge preserves notes and completion for unchanged tasks, marks materially changed tasks for review, and retains removed tasks in an archive for review. Review does not certify eligibility. Use the JSON report to summarize changed sources, deadlines, tasks, and questions, and tell the user what needs their attention. A refreshed source check date alone does not change a requirement. The CLI makes local backups before updates. The backup contains the same personal data; do not commit case folders to source control or upload them without the user's direction.
 
 ## Installation and checks
 
-In the source repository, this skill is in `skills/visa-agent/`. Copy that entire directory to `.agents/skills/visa-agent/` for Codex or `.claude/skills/visa-agent/` for Claude Code, in a project or the user's corresponding skill directory. Keep the scripts, references, and template alongside `SKILL.md`. Alternatively, from a cloned repository run `npx skills add . --skill visa-agent -a codex claude-code`. After public GitHub publication, use `npx skills add OWNER/REPO --skill visa-agent` with the actual repository name. Python 3.10+ is required. The executing agent needs web access for official research; the renderer itself is offline.
+In the source repository, this skill is in `skills/visa-agent/`. Copy that entire directory to `.agents/skills/visa-agent/` for Codex or `.claude/skills/visa-agent/` for Claude Code, in a project or the user's corresponding skill directory. Keep the scripts, references, and template alongside `SKILL.md`. Alternatively, from a cloned repository run `npx skills add . --skill visa-agent -a codex claude-code`. After public GitHub publication, use `npx skills add OWNER/REPO --skill visa-agent` with the actual repository name. Node.js 22.20+ runs the bundled script. The skill needs no Python or npm packages. The executing agent needs web access for official research; the renderer itself is offline.
 
-From the source repository run `python -m unittest discover -s tests -v`. Tests are repository tooling and are not required in the installed skill. The bundled example is synthetic and deliberately unverified. It tests rendering and uncertainty handling; it must not be presented as current New Zealand requirements.
+From the source repository run `npm test`. Tests are repository tooling and are not required in the installed skill. The bundled example is synthetic and deliberately unverified. It tests rendering and uncertainty handling; it must not be presented as current New Zealand requirements.
