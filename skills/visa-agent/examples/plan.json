@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {"id": "inz-discovery", "title": "Immigration New Zealand — Research starting point, not verified", "url": "https://www.immigration.govt.nz/", "checked_on": null}
+  ],
+  "open_questions": ["This demo has not checked official requirements. Check official sources before using it for a real application.", "What are the school, course, duration and expected start date?", "Current immigration status and the applicable visa route need to be checked."],
+  "tasks": [
+    {"id": "confirm-course", "phase": "Admissions preparation", "title": "Confirm school and course", "details": "Confirm the school, course and expected start date. Research the school’s official admissions guidance. This task is a preparation recommendation.", "status": "todo", "kind": "recommendation", "due_on": null, "due_kind": null, "source_ids": [], "depends_on": [], "notes": []},
+    {"id": "verify-visa-route", "phase": "Visa preparation", "title": "Verify the applicable visa and official requirements", "details": "Check official sources for the route that applies to the applicant’s nationality, country of residence, age, course and duration. Required evidence and visa eligibility have not yet been verified.", "status": "needs_review", "kind": "to_verify", "due_on": null, "due_kind": null, "source_ids": ["inz-discovery"], "depends_on": ["confirm-course"], "notes": []},
+    {"id": "plan-arrival", "phase": "Departure preparation", "title": "Plan arrival preparations", "details": "Once admissions dates and visa conditions are confirmed, plan accommodation, transport and other preparations. Do not buy tickets or make bookings.", "status": "todo", "kind": "recommendation", "due_on": null, "due_kind": null, "source_ids": [], "depends_on": ["verify-visa-route"], "notes": []}
+  ]
+}

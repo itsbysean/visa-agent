@@ -1,0 +1,16 @@
+{
+  "name": "visa-agent-site",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Visa Agent skill distribution and static homepage",
+  "scripts": {
+    "build": "python3 tools/build_site.py",
+    "test": "python3 -m unittest discover -s tests -v",
+    "test:browser": "playwright test",
+    "test:site": "node tests/site-dom.test.cjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.58.2",
+    "jsdom": "26.1.0"
+  }
+}

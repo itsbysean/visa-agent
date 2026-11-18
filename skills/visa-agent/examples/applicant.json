@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "display_name": "Example applicant · Not a real student",
+  "citizenships": ["Vietnam"],
+  "destination": "New Zealand",
+  "purpose": "Study",
+  "language": "en",
+  "current_country": "Vietnam",
+  "age_band": "Adult",
+  "school": null,
+  "course": null,
+  "start_on": null,
+  "route": null
+}
