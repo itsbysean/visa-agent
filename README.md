@@ -1,50 +1,29 @@
 # Visa Agent
 
-An AI agent skill that asks for missing applicant information, checks official sources, and creates a visa preparation plan with a local HTML dashboard. It manages preparation for study, work, visits, family, residence and transit. Use it with Codex and Claude Code.
+Visa Agent is a skill for Codex and Claude Code. Tell your agent your destination and purpose. It asks for missing details, checks current official sources, and creates a local dashboard with required documents, deadlines, next actions, and evidence. Use it for study, work, visits, family, residence, or transit.
 
-## Homepage and examples
+[Homepage](https://itsbysean.github.io/visa-agent/) · [Sample dashboard](https://itsbysean.github.io/visa-agent/demos/nz-study/index.html) · [skills.sh listing](https://skills.sh/itsbysean/visa-agent/visa-agent)
 
-- Homepage source: [`website/`](website/)
-- Built homepage: `dist/index.html` (generate it with the command below)
-- Homepage languages: English, Korean, Japanese and Simplified Chinese
-- Prompts cover study, work, visits and transit, family and residence, and case updates.
-- Open a synthetic case dashboard built with the actual renderer from the homepage.
-- Copy prompts and generate installation commands for your repository.
+## Install and use
+
+Run this command once from the folder where you want to keep your cases. Select Codex, Claude Code, or both when prompted.
 
 ```sh
-python3 tools/build_site.py
+npx skills add itsbysean/visa-agent --skill visa-agent
 ```
 
-Once you have a public GitHub repository, supply its address to include it in the homepage installation command.
+Open the same folder in your agent and paste one of the example prompts below. When the agent finishes, open the `index.html` link in its preview or in a browser. Expand a task to see why it applies, its official source, and when the source was checked. Tell the agent when a task is complete to update the dashboard.
 
-```sh
-python3 tools/build_site.py --repository OWNER/REPO
-```
+Install and generate cases with **Node.js 22.20 or later**. The agent runs the bundled script without Python or extra packages. It needs web access to check official sources. A browser is enough to open the generated dashboard.
 
-`OWNER/REPO` is a placeholder. It does not indicate that this project is published or listed on skills.sh.
-
-## Installation
-
-Installing and running the skill requires Node.js 22.20+. The agent runs the bundled script with no npm packages. Opening the dashboard only requires a browser. Extract the full project ZIP or download this repository, then run this command from the project root:
-
-```sh
-npx skills add . --skill visa-agent -a codex claude-code
-```
-
-After publishing to GitHub, install from the actual repository:
-
-```sh
-npx skills add OWNER/REPO --skill visa-agent
-```
-
-To install without the CLI, copy the **entire `skills/visa-agent/` directory** into your project's `.agents/skills/visa-agent/` or `.claude/skills/visa-agent/`. The `visa-agent-skill.zip` download contains the skill only. The `visa-agent.zip` download contains the full project, including the homepage and tests.
+For manual installation, extract the [skill ZIP](https://itsbysean.github.io/visa-agent/downloads/visa-agent-skill.zip) and copy the entire `visa-agent` folder into your project's `.agents/skills/` (Codex) or `.claude/skills/` (Claude Code). The agent still needs Node.js to generate cases.
 
 ## Example prompts
 
 ```text
 Use visa-agent to help a Vietnamese applicant prepare to study in New Zealand.
 The school is [school] and the course is [course].
-Ask for missing information first and check official sources.
+Ask for missing information first and check current official sources.
 Create an admissions, visa and departure checklist with an HTML dashboard.
 Save the output in English to students/case-001.
 ```
@@ -63,31 +42,31 @@ Add a note and update the HTML while preserving existing completion records.
 
 ## Storage
 
-The default root is `students/`. You can use another root, such as `visas/`. Each case contains `student.json` (applicant information for all visa purposes), `plan.json` (the source of truth), `README.md` and `index.html`. HTML is a read-only view. Tell the agent which tasks are complete to update progress. Replanning preserves notes and progress and flags changed requirements for review.
+The default case folder is `students/`. You can choose another folder, such as `visas/`. Each case contains `student.json` for applicant details, `plan.json` for the task records, `README.md` for the summary, and `index.html` for the dashboard. Cases created with the earlier Python version use the same format. When you ask the agent to check the plan again, it opens current official sources, preserves progress on unchanged tasks, and flags changes for review.
 
-Exclude real cases and `.history` backups from version control because they can contain personal information. Public demos use synthetic data only. The first country research guide covers New Zealand. Other destinations and routes require official research at runtime. Requirements for all countries have not been verified in advance. The skill does not submit applications, pay fees or contact authorities.
+Keep real cases and `.history` backups out of version control because they can contain personal information. The public demo uses fictional data. The bundled country guide covers New Zealand. For each case, the agent researches the relevant requirements for the destination and visa route. The skill does not submit applications, pay fees, or contact authorities.
 
 ## Structure and verification
 
-The repository build uses Python 3.10+ to package the website downloads. Skill users only need Node.js.
+The homepage is available in English, Korean, Japanese, and Simplified Chinese. The repository build uses Python 3.10+ to package website downloads.
 
 ```text
 skills/visa-agent/
   SKILL.md                 # Skill entry point discovered by the CLI
-  scripts/visa_case.cjs      # Create, update, replan, validate and render cases
+  scripts/visa_case.cjs    # Create, update, replan, validate and render cases
   templates/dashboard.html
   references/              # Research guidance and data contract
   examples/                # Synthetic input data
 website/                   # Homepage source and translations
-tools/build_site.py       # Static site, demos and ZIP builder
+tools/build_site.py        # Static site, demos and ZIP builder
 tests/                     # Case data and homepage tests
 .github/workflows/         # Verification, screenshots and GitHub Pages
 ```
 
 ```sh
-npm test
 npm ci
-python3 tools/build_site.py
+npm test
+npm run build -- --repository itsbysean/visa-agent
 npm run test:site
 npx playwright install chromium
 npm run test:browser
